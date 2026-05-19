@@ -193,7 +193,7 @@ function createWheels() {
   for (let i = 0; i < wheelCount; i++) {
     const wheelHTML = `
       <div class="wheel-section ${i === 0 ? 'active' : 'locked'}" id="sec${i}">
-        <div class="wheel-label">① ${i === 0 ? 'Mii' : i === 1 ? 'Category' : i === 2 ? 'Subcategory' : i === 3 ? 'Item' : `Wheel ${i + 1}`}</div>
+        <div class="wheel-label">${i === 0 ? '① Mii' : i === 1 ? '② Category' : i === 2 ? '③ Subcategory' : i === 3 ? '④ Item' : `① Wheel ${i + 1}`}</div>
         <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c${i}" width="200" height="200"></canvas></div>
         <div class="wheel-result" id="r${i}">—</div>
         <div class="wheel-btns">
@@ -299,7 +299,7 @@ function onDone(i) {
   if (chosen.every(v => v!==null)) {
     const labels=['Mii','Category','Subcategory','Item'];
     document.getElementById('result-chips').innerHTML=
-      chosen.map((v,j)=>`<div class="chip"><em>${j < labels.length ? labels[j] : `Wheel ${j + 1}`}:${/em>${v}</div>`).join('');
+      chosen.map((v,j)=>`<div class="chip"><em>${j < labels.length ? labels[j] : `Wheel ${j + 1}`}:</em>${v}</div>`).join('');
     document.getElementById('result-card').classList.add('show');
   }
 }
@@ -403,4 +403,3 @@ for (let i=0;i<wheelCount;i++) draw(i,0);
 </script>
 </body>
 </html>
-
