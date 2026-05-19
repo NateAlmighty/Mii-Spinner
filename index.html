@@ -165,7 +165,7 @@ const save = () => {
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
 const chosen = [null, null, null, null];
-const rots = [];
+const rots = new Array(wheelCount).fill(0);
 let   busy   = false;
 let   wheelCount = 4; // Default number of wheels
 
