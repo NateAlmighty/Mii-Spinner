@@ -220,7 +220,9 @@ function draw(i, rot) {
   try {
     const cv = document.getElementById(`c${i}`);
     if (!cv) {
-      console.warn(`Canvas c${i} not found`);
+      console.warn(`Canvas c${i} not found, retrying...`);
+      // Retry after a short delay
+      setTimeout(() => draw(i, rot), 50);
       return;
     }
     
@@ -229,7 +231,7 @@ function draw(i, rot) {
       console.warn(`Canvas context for c${i} not available`);
       return;
     }
-    
+       
     const W = 200, cx = W/2, r = W/2-4;
     ctx.clearRect(0,0,W,W);
     const items = getItems(i);
