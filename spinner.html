@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mii Item Spinner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffffe;min-height:100vh;display:flex;flex-direction:column;user-select:none}
+header{padding:16px 28px;background:#12112a;border-bottom:2px solid #6d28d9;display:flex;align-items:center;gap:12px}
+header h1{font-size:1.4rem;color:#a78bfa;font-weight:700;letter-spacing:.02em}
+header .sub{font-size:.8rem;color:#6b7280;margin-left:auto}
+.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap}
+.arrow-sep{display:flex;align-items:center;color:#6d28d9;font-size:1.4rem;padding-top:60px;flex-shrink:0}
+.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:opacity .3s}
+.wheel-section.locked{opacity:.3;pointer-events:none}
+.wheel-section.active{opacity:1}
+.wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700}
+.wheel-wrapper{position:relative;width:200px;height:200px}
+canvas{border-radius:50%;box-shadow:0 0 28px rgba(109,40,217,.35)}
+.pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:20px solid #fbbf24;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));z-index:10}
+.wheel-result{font-size:.95rem;font-weight:700;color:#fde68a;min-height:22px;text-align:center;max-width:200px;transition:all .3s}
+.wheel-btns{display:flex;gap:8px}
+button{cursor:pointer;border:none;border-radius:8px;font-size:.85rem;font-weight:600;padding:8px 16px;transition:all .15s}
+.btn-spin{background:#7c3aed;color:#fff;padding:9px 22px}
+.btn-spin:hover:not(:disabled){background:#6d28d9;transform:translateY(-1px)}
+.btn-spin:disabled{background:#2d2d3a;color:#555;cursor:not-allowed}
+.btn-gear{background:#1e1e2e;color:#9ca3af;border:1px solid #374151;padding:9px 13px}
+.btn-gear:hover{background:#2d2d3a;color:#e5e7eb}
+.bottom{padding:0 24px 28px;display:flex;flex-direction:column;gap:12px}
+.result-card{background:#12112a;border:1px solid #7c3aed;border-radius:14px;padding:18px 24px;display:none;animation:fadeIn .4s ease}
+.result-card.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.result-card h2{color:#a78bfa;font-size:1rem;margin-bottom:10px}
+.result-chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:#1e1040;border:1px solid #6d28d9;border-radius:20px;padding:5px 14px;font-size:.82rem;color:#e9d5ff}
+.chip em{color:#a78bfa;font-style:normal;font-size:.72rem;margin-right:4px}
+.btn-reset{align-self:flex-start;background:#1e1e2e;color:#9ca3af;border:1px solid #374151;padding:8px 18px}
+.btn-reset:hover{background:#2d2d3a;color:#e5e7eb}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#12112a;border:1px solid #6d28d9;border-radius:16px;padding:24px;width:460px;max-width:92vw;max-height:82vh;display:flex;flex-direction:column;gap:14px}
+.modal h2{color:#a78bfa;font-size:1.05rem}
+.modal-hint{font-size:.78rem;color:#6b7280}
+select.modal-sel{background:#0f0e17;border:1px solid #374151;border-radius:8px;padding:8px 12px;color:#fffffe;font-size:.85rem;width:100%}
+select.modal-sel:focus{outline:none;border-color:#7c3aed}
+.list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:260px}
+.list-item{display:flex;align-items:center;justify-content:space-between;background:#0f0e17;border:1px solid #2d2d3a;border-radius:8px;padding:7px 12px;font-size:.85rem}
+.list-item .del{background:none;color:#ef4444;padding:2px 8px;font-size:.95rem;border-radius:4px}
+.list-item .del:hover{color:#dc2626;background:#2d1010}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;background:#0f0e17;border:1px solid #374151;border-radius:8px;padding:8px 12px;color:#fffffe;font-size:.85rem}
+.add-row input:focus{outline:none;border-color:#7c3aed}
+.add-row input::placeholder{color:#4b5563}
+.btn-add{background:#7c3aed;color:#fff}
+.btn-add:hover{background:#6d28d9}
+.btn-close{background:#2d2d3a;color:#d1d5db;align-self:flex-end}
+.btn-close:hover{background:#374151}
+.empty-msg{color:#4b5563;font-size:.83rem;text-align:center;padding:18px}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.6rem">🎡</span>
+  <h1>Mii Item Spinner</h1>
+  <span class="sub">Spin in order → each wheel unlocks the next</span>
+</header>
+
+<div class="wheels-container">
+  <div class="wheel-section active" id="sec0">
+    <div class="wheel-label">① Mii Name</div>
+    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c0" width="200" height="200"></canvas></div>
+    <div class="wheel-result" id="r0">—</div>
+    <div class="wheel-btns">
+      <button class="btn-spin" id="s0" onclick="spin(0)">Spin</button>
+      <button class="btn-gear" onclick="openModal(0)" title="Manage">⚙</button>
+    </div>
+  </div>
+
+  <div class="arrow-sep">→</div>
+
+  <div class="wheel-section locked" id="sec1">
+    <div class="wheel-label">② Category</div>
+    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c1" width="200" height="200"></canvas></div>
+    <div class="wheel-result" id="r1">—</div>
+    <div class="wheel-btns">
+      <button class="btn-spin" id="s1" onclick="spin(1)" disabled>Spin</button>
+      <button class="btn-gear" onclick="openModal(1)" title="Manage">⚙</button>
+    </div>
+  </div>
+
+  <div class="arrow-sep">→</div>
+
+  <div class="wheel-section locked" id="sec2">
+    <div class="wheel-label">③ Subcategory</div>
+    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c2" width="200" height="200"></canvas></div>
+    <div class="wheel-result" id="r2">—</div>
+    <div class="wheel-btns">
+      <button class="btn-spin" id="s2" onclick="spin(2)" disabled>Spin</button>
+      <button class="btn-gear" onclick="openModal(2)" title="Manage">⚙</button>
+    </div>
+  </div>
+
+  <div class="arrow-sep">→</div>
+
+  <div class="wheel-section locked" id="sec3">
+    <div class="wheel-label">④ Item</div>
+    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c3" width="200" height="200"></canvas></div>
+    <div class="wheel-result" id="r3">—</div>
+    <div class="wheel-btns">
+      <button class="btn-spin" id="s3" onclick="spin(3)" disabled>Spin</button>
+      <button class="btn-gear" onclick="openModal(3)" title="Manage">⚙</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom">
+  <button class="btn-reset" onclick="resetAll()">🔄 Reset All</button>
+  <div class="result-card" id="result-card">
+    <h2>🎉 Final Result</h2>
+    <div class="result-chips" id="result-chips"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="m-title">Manage Options</h2>
+    <div id="m-hint" class="modal-hint"></div>
+    <div id="m-sel-wrap" style="display:none">
+      <label style="font-size:.75rem;color:#6b7280;display:block;margin-bottom:4px" id="m-sel-label">Parent:</label>
+      <select class="modal-sel" id="m-sel" onchange="renderList()"></select>
+    </div>
+    <div class="list" id="m-list"></div>
+    <div class="add-row">
+      <input id="m-input" placeholder="Type option name…" onkeydown="if(event.key==='Enter')addItem()">
+      <button class="btn-add" onclick="addItem()">Add</button>
+    </div>
+    <button class="btn-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────────
+const KEY = 'mii-spinner-v1';
+const DEFAULTS = {
+  miis: ['Alex', 'Bella', 'Carlos', 'Dana', 'Evan'],
+  categories: ['Weapon', 'Clothing', 'Food', 'Tool', 'Magic'],
+  subcategories: {
+    Weapon:   ['Sword','Axe','Bow','Dagger','Spear'],
+    Clothing: ['Hat','Shirt','Pants','Cape','Shoes'],
+    Food:     ['Fruit','Meat','Bread','Potion','Candy'],
+    Tool:     ['Hammer','Shovel','Lantern','Rope','Map'],
+    Magic:    ['Wand','Tome','Crystal','Scroll','Amulet']
+  },
+  items: {
+    'Alex|Weapon|Sword':    ['Iron Saber','Blade of Reckoning'],
+    'Alex|Clothing|Hat':    ["Alex's Lucky Cap"],
+    'Bella|Magic|Wand':     ['Starlight Wand','The Whispering Rod'],
+    'Carlos|Food|Meat':     ['Grilled Dragon Steak'],
+  }
+};
+
+let D = (() => { try { const s=localStorage.getItem(KEY); return s?JSON.parse(s):structuredClone(DEFAULTS); } catch { return structuredClone(DEFAULTS); } })();
+const save = () => localStorage.setItem(KEY, JSON.stringify(D));
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+const chosen = [null,null,null,null];
+const rots   = [0,0,0,0];
+let   busy   = false;
+
+function getItems(i) {
+  if (i===0) return [...D.miis];
+  if (i===1) return [...D.categories];
+  if (i===2) return chosen[1] ? [...(D.subcategories[chosen[1]]||[])] : [];
+  if (i===3) {
+    const k=`${chosen[0]}|${chosen[1]}|${chosen[2]}`;
+    return [...(D.items[k]||[])];
+  }
+  return [];
+}
+
+// ─── PALETTE ───────────────────────────────────────────────────────────────
+const PAL=['#7c3aed','#4f46e5','#0891b2','#0d9488','#059669','#d97706','#dc2626','#db2777','#6d28d9','#1d4ed8','#b45309','#065f46'];
+
+// ─── DRAW ──────────────────────────────────────────────────────────────────
+function draw(i, rot) {
+  const cv = document.getElementById(`c${i}`);
+  const ctx= cv.getContext('2d');
+  const W=200, cx=W/2, r=W/2-4;
+  ctx.clearRect(0,0,W,W);
+  const items = getItems(i);
+
+  if (!items.length) {
+    ctx.beginPath(); ctx.arc(cx,cx,r,0,Math.PI*2);
+    ctx.fillStyle='#1a1a2e'; ctx.fill();
+    ctx.strokeStyle='#374151'; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle='#4b5563'; ctx.font='13px Segoe UI';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('No options added',cx,cx-8);
+    ctx.fillText('Use ⚙ to add',cx,cx+10);
+    return;
+  }
+
+  const seg = Math.PI*2/items.length;
+  items.forEach((label,j) => {
+    const a0=rot+j*seg, a1=a0+seg;
+    ctx.beginPath(); ctx.moveTo(cx,cx); ctx.arc(cx,cx,r,a0,a1); ctx.closePath();
+    ctx.fillStyle=PAL[j%PAL.length]; ctx.fill();
+    ctx.strokeStyle='#0f0e17'; ctx.lineWidth=2; ctx.stroke();
+    ctx.save(); ctx.translate(cx,cx); ctx.rotate(a0+seg/2);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff';
+    const fs = items.length>10?9:items.length>6?11:13;
+    ctx.font=`600 ${fs}px Segoe UI`;
+    const lbl = label.length>15?label.slice(0,14)+'…':label;
+    ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=4;
+    ctx.fillText(lbl, r-8, 0);
+    ctx.restore();
+  });
+
+  // Center hub
+  ctx.beginPath(); ctx.arc(cx,cx,16,0,Math.PI*2);
+  ctx.fillStyle='#0f0e17'; ctx.fill();
+  ctx.strokeStyle='#7c3aed'; ctx.lineWidth=3; ctx.stroke();
+}
+
+// ─── SPIN ──────────────────────────────────────────────────────────────────
+function spin(i) {
+  if (busy) return;
+  const items=getItems(i);
+  if (!items.length) { alert('No options in this wheel!\nUse ⚙ to add some.'); return; }
+  busy=true;
+  document.getElementById(`s${i}`).disabled=true;
+
+  const n=items.length, seg=Math.PI*2/n;
+  const target=Math.floor(Math.random()*n);
+  // pointer at top = -PI/2; want center of target slice there
+  const tAngle = -Math.PI/2 - target*seg - seg/2;
+  const minFinal = rots[i] + 5*Math.PI*2;
+  const k = Math.ceil((minFinal-tAngle)/(Math.PI*2));
+  const finalRot = tAngle + k*Math.PI*2;
+  const startRot = rots[i];
+  const dur = 3200 + Math.random()*900;
+  const t0  = performance.now();
+  const ease = t => 1-Math.pow(1-t,4);
+
+  (function frame(now) {
+    const t=Math.min((now-t0)/dur,1);
+    rots[i]=startRot+(finalRot-startRot)*ease(t);
+    draw(i,rots[i]);
+    if (t<1) { requestAnimationFrame(frame); return; }
+    rots[i]=finalRot;
+    chosen[i]=items[target];
+    document.getElementById(`r${i}`).textContent=items[target];
+    busy=false;
+    onDone(i);
+  })(t0);
+}
+
+function onDone(i) {
+  if (i<3) {
+    const next=i+1;
+    document.getElementById(`sec${next}`).classList.remove('locked');
+    document.getElementById(`sec${next}`).classList.add('active');
+    document.getElementById(`s${next}`).disabled=false;
+    draw(next, rots[next]);
+  }
+  if (chosen.every(v=>v!==null)) {
+    const labels=['Mii','Category','Subcategory','Item'];
+    document.getElementById('result-chips').innerHTML=
+      chosen.map((v,j)=>`<div class="chip"><em>${labels[j]}:</em>${v}</div>`).join('');
+    document.getElementById('result-card').classList.add('show');
+  }
+}
+
+function resetAll() {
+  chosen.fill(null); rots.fill(0); busy=false;
+  for (let i=0;i<4;i++) {
+    document.getElementById(`r${i}`).textContent='—';
+    document.getElementById(`s${i}`).disabled=(i!==0);
+    const s=document.getElementById(`sec${i}`);
+    s.className='wheel-section '+(i===0?'active':'locked');
+    draw(i,0);
+  }
+  document.getElementById('result-card').classList.remove('show');
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────────────────
+let mIdx=-1;
+
+function openModal(i) {
+  mIdx=i;
+  const TITLES=['Manage Mii Names','Manage Categories','Manage Subcategories','Manage Items'];
+  const HINTS =[
+    'These names will appear on Wheel 1.',
+    'These are the top-level item categories.',
+    'Subcategories are grouped by category — select one below.',
+    'Items are unique to each Mii + Category + Subcategory combination.'
+  ];
+  document.getElementById('m-title').textContent=TITLES[i];
+  document.getElementById('m-hint').textContent=HINTS[i];
+
+  const wrap=document.getElementById('m-sel-wrap');
+  const sel =document.getElementById('m-sel');
+
+  if (i===2) {
+    wrap.style.display='block';
+    document.getElementById('m-sel-label').textContent='Category:';
+    sel.innerHTML=D.categories.map(c=>`<option>${c}</option>`).join('');
+    if (chosen[1] && D.categories.includes(chosen[1])) sel.value=chosen[1];
+  } else if (i===3) {
+    wrap.style.display='block';
+    document.getElementById('m-sel-label').textContent='Mii → Category → Subcategory:';
+    const combos=[];
+    D.miis.forEach(m=>D.categories.forEach(c=>(D.subcategories[c]||[]).forEach(s=>combos.push(`${m}|${c}|${s}`))));
+    sel.innerHTML=combos.length
+      ? combos.map(k=>`<option value="${k}">${k.replace(/\|/g,' → ')}</option>`).join('')
+      : '<option value="">— no combos yet (add Miis + subcategories first) —</option>';
+    const cur=chosen.every(v=>v)&&`${chosen[0]}|${chosen[1]}|${chosen[2]}`;
+    if (cur && combos.includes(cur)) sel.value=cur;
+  } else {
+    wrap.style.display='none';
+  }
+
+  renderList();
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('m-input').focus();
+}
+
+function renderList() {
+  const i=mIdx, list=document.getElementById('m-list');
+  let items=[];
+  if (i===0) items=D.miis;
+  else if (i===1) items=D.categories;
+  else if (i===2) { const c=document.getElementById('m-sel').value; items=D.subcategories[c]||[]; }
+  else { const k=document.getElementById('m-sel').value; items=D.items[k]||[]; }
+
+  if (!items.length) { list.innerHTML='<div class="empty-msg">No options yet. Add one below!</div>'; return; }
+  list.innerHTML=items.map((v,j)=>`
+    <div class="list-item">
+      <span>${v}</span>
+      <button class="del" onclick="removeItem(${j})">✕</button>
+    </div>`).join('');
+}
+
+function addItem() {
+  const val=document.getElementById('m-input').value.trim();
+  if (!val) return;
+  const i=mIdx;
+  if (i===0) { if(!D.miis.includes(val)) D.miis.push(val); }
+  else if (i===1) { if(!D.categories.includes(val)){ D.categories.push(val); if(!D.subcategories[val]) D.subcategories[val]=[]; } }
+  else if (i===2) { const c=document.getElementById('m-sel').value; if(!D.subcategories[c]) D.subcategories[c]=[]; if(!D.subcategories[c].includes(val)) D.subcategories[c].push(val); }
+  else { const k=document.getElementById('m-sel').value; if(!k) return; if(!D.items[k]) D.items[k]=[]; if(!D.items[k].includes(val)) D.items[k].push(val); }
+  save(); document.getElementById('m-input').value='';
+  renderList(); draw(i,rots[i]);
+}
+
+function removeItem(j) {
+  const i=mIdx;
+  if (i===0) D.miis.splice(j,1);
+  else if (i===1) { const [c]=D.categories.splice(j,1); delete D.subcategories[c]; }
+  else if (i===2) { const c=document.getElementById('m-sel').value; D.subcategories[c].splice(j,1); }
+  else { const k=document.getElementById('m-sel').value; D.items[k].splice(j,1); }
+  save(); renderList(); draw(i,rots[i]);
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+for (let i=0;i<4;i++) draw(i,0);
+</script>
+</body>
+</html>
