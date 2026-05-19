@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mii Item Spinner</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffffe;min-height:100vh;display:flex;flex-direction:column;user-select:none}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffffe;min-height:100vh;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none}
 header{padding:16px 28px;background:#12112a;border-bottom:2px solid #6d28d9;display:flex;align-items:center;gap:12px}
 header h1{font-size:1.4rem;color:#a78bfa;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:.8rem;color:#6b7280;margin-left:auto}
 .wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap}
 .arrow-sep{display:flex;align-items:center;color:#6d28d9;font-size:1.4rem;padding-top:60px;flex-shrink:0}
-.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:opacity .3s}
-.wheel-section.locked{opacity:.3;pointer-events:none}
-.wheel-section.active{opacity:1}
+.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s}
+.wheel-section.locked{background-color:rgba(15,14,23,0.3)}
+.wheel-section.active{background-color:transparent}
 .wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700}
 .wheel-wrapper{position:relative;width:200px;height:200px}
 canvas{border-radius:50%;box-shadow:0 0 28px rgba(109,40,217,.35)}
@@ -57,13 +58,17 @@ select.modal-sel:focus{outline:none;border-color:#7c3aed}
 .btn-add:hover{background:#6d28d9}
 .btn-close{background:#2d2d3a;color:#d1d5db;align-self:flex-end}
 .btn-close:hover{background:#374151}
+.emoji-icon{font-size:1.6rem}
+
 .empty-msg{color:#4b5563;font-size:.83rem;text-align:center;padding:18px}
+
+.sel-label{font-size:.75rem;color:#6b7280;display:block;margin-bottom:4px}
 </style>
 </head>
 <body>
 
 <header>
-  <span style="font-size:1.6rem">🎡</span>
+  <span class="emoji-icon">🎡</span>
   <h1>Mii Item Spinner</h1>
   <span class="sub">Spin in order → each wheel unlocks the next</span>
 </header>
@@ -130,7 +135,7 @@ select.modal-sel:focus{outline:none;border-color:#7c3aed}
     <h2 id="m-title">Manage Options</h2>
     <div id="m-hint" class="modal-hint"></div>
     <div id="m-sel-wrap" style="display:none">
-      <label style="font-size:.75rem;color:#6b7280;display:block;margin-bottom:4px" id="m-sel-label">Parent:</label>
+      <label class="sel-label" id="m-sel-label">Parent:</label>
       <select class="modal-sel" id="m-sel" onchange="renderList()"></select>
     </div>
     <div class="list" id="m-list"></div>
@@ -163,20 +168,58 @@ const DEFAULTS = {
   }
 };
 
-let D = (() => { try { const s=localStorage.getItem(KEY); return s?JSON.parse(s):structuredClone(DEFAULTS); } catch { return structuredClone(DEFAULTS); } })();
-const save = () => localStorage.setItem(KEY, JSON.stringify(D));
+let D = (() => { 
+  try { 
+    // Try localStorage first (works on GitHub Pages with user scripts)
+    const s = localStorage.getItem(KEY);
+    if (s) return JSON.parse(s);
+    
+    // Try URL parameters for GitHub Pages persistence
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlData = urlParams.get('data');
+    if (urlData) {
+      try {
+        return JSON.parse(atob(urlData)); // Base64 decode
+      } catch (e) {
+        console.warn('Failed to parse URL data:', e);
+      }
+    }
+    
+    // Try to load from localStorage again as fallback
+    const fallback = localStorage.getItem(KEY);
+    if (fallback) return JSON.parse(fallback);
+    
+    return structuredClone(DEFAULTS); 
+  } catch { 
+    return structuredClone(DEFAULTS); 
+  } 
+})();
+
+const save = () => {
+  localStorage.setItem(KEY, JSON.stringify(D));
+  
+  // Also save to URL for GitHub Pages persistence
+  try {
+    const encodedData = btoa(JSON.stringify(D));
+    const url = new URL(window.location);
+    url.searchParams.set('data', encodedData);
+    window.history.replaceState({}, '', url);
+  } catch (e) {
+    console.warn('Failed to save to URL:', e);
+  }
+};
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
 const chosen = [null,null,null,null];
-const rots   = [0,0,0,0];
+const rots   = ;
 let   busy   = false;
 
 function getItems(i) {
   if (i===0) return [...D.miis];
   if (i===1) return [...D.categories];
-  if (i===2) return chosen[1] ? [...(D.subcategories[chosen[1]]||[])] : [];
+  if (i===2) return chosen ? [...(D.subcategories[chosen]||[])] : [];
   if (i===3) {
-    const k=`${chosen[0]}|${chosen[1]}|${chosen[2]}`;
+    const k=`${chosen}|${chosen}|${chosen}`;
     return [...(D.items[k]||[])];
   }
   return [];
@@ -310,7 +353,7 @@ function openModal(i) {
     wrap.style.display='block';
     document.getElementById('m-sel-label').textContent='Category:';
     sel.innerHTML=D.categories.map(c=>`<option>${c}</option>`).join('');
-    if (chosen[1] && D.categories.includes(chosen[1])) sel.value=chosen[1];
+    if (chosen && D.categories.includes(chosen)) sel.value=chosen;
   } else if (i===3) {
     wrap.style.display='block';
     document.getElementById('m-sel-label').textContent='Mii → Category → Subcategory:';
@@ -319,7 +362,7 @@ function openModal(i) {
     sel.innerHTML=combos.length
       ? combos.map(k=>`<option value="${k}">${k.replace(/\|/g,' → ')}</option>`).join('')
       : '<option value="">— no combos yet (add Miis + subcategories first) —</option>';
-    const cur=chosen.every(v=>v)&&`${chosen[0]}|${chosen[1]}|${chosen[2]}`;
+    const cur=chosen.every(v=>v)&&`${chosen}|${chosen}|${chosen}`;
     if (cur && combos.includes(cur)) sel.value=cur;
   } else {
     wrap.style.display='none';
