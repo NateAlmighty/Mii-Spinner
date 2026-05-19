@@ -10,9 +10,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffff
 header{padding:16px 28px;background:#12112a;border-bottom:2px solid #6d28d9;display:flex;align-items:center;gap:12px}
 header h1{font-size:1.4rem;color:#a78bfa;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:.8rem;color:#6b7280;margin-left:auto}
-.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap}
+.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
 .arrow-sep{display:flex;align-items:center;color:#6d28d9;font-size:1.4rem;padding-top:60px;flex-shrink:0}
-.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s}
+.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s;min-width:200px}
 .wheel-section.locked{background-color:rgba(15,14,23,0.3)}
 .wheel-section.active{background-color:transparent}
 .wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700}
@@ -73,52 +73,8 @@ select.modal-sel:focus{outline:none;border-color:#7c3aed}
   <span class="sub">Spin in order → each wheel unlocks the next</span>
 </header>
 
-<div class="wheels-container">
-  <div class="wheel-section active" id="sec0">
-    <div class="wheel-label">① Mii Name</div>
-    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c0" width="200" height="200"></canvas></div>
-    <div class="wheel-result" id="r0">—</div>
-    <div class="wheel-btns">
-      <button class="btn-spin" id="s0" onclick="spin(0)">Spin</button>
-      <button class="btn-gear" onclick="openModal(0)" title="Manage">⚙</button>
-    </div>
-  </div>
-
-  <div class="arrow-sep">→</div>
-
-  <div class="wheel-section locked" id="sec1">
-    <div class="wheel-label">② Category</div>
-    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c1" width="200" height="200"></canvas></div>
-    <div class="wheel-result" id="r1">—</div>
-    <div class="wheel-btns">
-      <button class="btn-spin" id="s1" onclick="spin(1)" disabled>Spin</button>
-      <button class="btn-gear" onclick="openModal(1)" title="Manage">⚙</button>
-    </div>
-  </div>
-
-  <div class="arrow-sep">→</div>
-
-  <div class="wheel-section locked" id="sec2">
-    <div class="wheel-label">③ Subcategory</div>
-    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c2" width="200" height="200"></canvas></div>
-    <div class="wheel-result" id="r2">—</div>
-    <div class="wheel-btns">
-      <button class="btn-spin" id="s2" onclick="spin(2)" disabled>Spin</button>
-      <button class="btn-gear" onclick="openModal(2)" title="Manage">⚙</button>
-    </div>
-  </div>
-
-  <div class="arrow-sep">→</div>
-
-  <div class="wheel-section locked" id="sec3">
-    <div class="wheel-label">④ Item</div>
-    <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c3" width="200" height="200"></canvas></div>
-    <div class="wheel-result" id="r3">—</div>
-    <div class="wheel-btns">
-      <button class="btn-spin" id="s3" onclick="spin(3)" disabled>Spin</button>
-      <button class="btn-gear" onclick="openModal(3)" title="Manage">⚙</button>
-    </div>
-  </div>
+<div class="wheels-container" id="wheels-container">
+  <!-- Wheels will be dynamically generated here -->
 </div>
 
 <div class="bottom">
@@ -210,9 +166,10 @@ const save = () => {
 };
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
-const chosen = [null,null,null,null];
-const rots = [] ;
+const chosen = [];
+const rots = [];
 let   busy   = false;
+let   wheelCount = 4; // Default number of wheels
 
 function getItems(i) {
   if (i===0) return [...D.miis];
@@ -228,9 +185,37 @@ function getItems(i) {
 // ─── PALETTE ───────────────────────────────────────────────────────────────
 const PAL=['#7c3aed','#4f46e5','#0891b2','#0d9488','#059669','#d97706','#dc2626','#db2777','#6d28d9','#1d4ed8','#b45309','#065f46'];
 
+// ─── CREATE WHEELS ─────────────────────────────────────────────────────────
+function createWheels() {
+  const container = document.getElementById('wheels-container');
+  container.innerHTML = '';
+  
+  for (let i = 0; i < wheelCount; i++) {
+    const wheelHTML = `
+      <div class="wheel-section ${i === 0 ? 'active' : 'locked'}" id="sec${i}">
+        <div class="wheel-label">① ${i === 0 ? 'Mii' : i === 1 ? 'Category' : i === 2 ? 'Subcategory' : i === 3 ? 'Item' : `Wheel ${i + 1}`}</div>
+        <div class="wheel-wrapper"><div class="pointer"></div><canvas id="c${i}" width="200" height="200"></canvas></div>
+        <div class="wheel-result" id="r${i}">—</div>
+        <div class="wheel-btns">
+          <button class="btn-spin" id="s${i}" onclick="spin(${i})" ${i === 0 ? '' : 'disabled'}>Spin</button>
+          <button class="btn-gear" onclick="openModal(${i})" title="Manage">⚙</button>
+        </div>
+      </div>
+    `;
+    
+    container.innerHTML += wheelHTML;
+    
+    if (i < wheelCount - 1) {
+      container.innerHTML += '<div class="arrow-sep">→</div>';
+    }
+  }
+}
+
 // ─── DRAW ──────────────────────────────────────────────────────────────────
 function draw(i, rot) {
   const cv = document.getElementById(`c${i}`);
+  if (!cv) return;
+  
   const ctx= cv.getContext('2d');
   const W=200, cx=W/2, r=W/2-4;
   ctx.clearRect(0,0,W,W);
@@ -304,24 +289,24 @@ function spin(i) {
 }
 
 function onDone(i) {
-  if (i<3) {
+  if (i < wheelCount - 1) {
     const next=i+1;
     document.getElementById(`sec${next}`).classList.remove('locked');
     document.getElementById(`sec${next}`).classList.add('active');
     document.getElementById(`s${next}`).disabled=false;
     draw(next, rots[next]);
   }
-  if (chosen.every(v=>v!==null)) {
+  if (chosen.every(v => v!==null)) {
     const labels=['Mii','Category','Subcategory','Item'];
     document.getElementById('result-chips').innerHTML=
-      chosen.map((v,j)=>`<div class="chip"><em>${labels[j]}:</em>${v}</div>`).join('');
+      chosen.map((v,j)=>`<div class="chip"><em>${j < labels.length ? labels[j] : `Wheel ${j + 1}`}:${/em>${v}</div>`).join('');
     document.getElementById('result-card').classList.add('show');
   }
 }
 
 function resetAll() {
   chosen.fill(null); rots.fill(0); busy=false;
-  for (let i=0;i<4;i++) {
+  for (let i=0;i<wheelCount;i++) {
     document.getElementById(`r${i}`).textContent='—';
     document.getElementById(`s${i}`).disabled=(i!==0);
     const s=document.getElementById(`sec${i}`);
@@ -353,7 +338,7 @@ function openModal(i) {
     wrap.style.display='block';
     document.getElementById('m-sel-label').textContent='Category:';
     sel.innerHTML=D.categories.map(c=>`<option>${c}</option>`).join('');
-    if (chosen && D.categories.includes(chosen)) sel.value=chosen;
+    if (chosen && chosen && D.categories.includes(chosen)) sel.value=chosen;
   } else if (i===3) {
     wrap.style.display='block';
     document.getElementById('m-sel-label').textContent='Mii → Category → Subcategory:';
@@ -413,7 +398,9 @@ function removeItem(j) {
 function closeModal() { document.getElementById('overlay').classList.remove('open'); }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
-for (let i=0;i<4;i++) draw(i,0);
+createWheels();
+for (let i=0;i<wheelCount;i++) draw(i,0);
 </script>
 </body>
 </html>
+
