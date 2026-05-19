@@ -10,7 +10,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffff
 header{padding:16px 28px;background:#12112a;border-bottom:2px solid #6d28d9;display:flex;align-items:center;gap:12px}
 header h1{font-size:1.4rem;color:#a78bfa;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:.8rem;color:#6b7280;margin-left:auto}
-.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;min-height:240px;position:relative}
+.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;min-height:240px}
 .arrow-sep{display:flex;align-items:center;color:#6d28d9;font-size:1.4rem;padding-top:60px;flex-shrink:0}
 .wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s;min-width:200px;width:200px;flex:0 0 auto}
 .wheel-section.locked{background-color:rgba(15,14,23,0.3)}
@@ -190,6 +190,8 @@ const PAL=['#7c3aed','#4f46e5','#0891b2','#0d9488','#059669','#d97706','#dc2626'
 // ─── CREATE WHEELS ─────────────────────────────────────────────────────────
 function createWheels() {
   const container = document.getElementById('wheels-container');
+  if (!container) return;
+  
   container.innerHTML = '';
   
   for (let i = 0; i < wheelCount; i++) {
@@ -217,16 +219,22 @@ function createWheels() {
 function draw(i, rot) {
   try {
     const cv = document.getElementById(`c${i}`);
-    if (!cv) return;
+    if (!cv) {
+      console.warn(`Canvas c${i} not found`);
+      return;
+    }
     
     const ctx = cv.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn(`Canvas context for c${i} not available`);
+      return;
+    }
     
     const W = 200, cx = W/2, r = W/2-4;
     ctx.clearRect(0,0,W,W);
     const items = getItems(i);
 
-    if (!items.length) {
+    if (!items || items.length === 0) {
       ctx.beginPath(); ctx.arc(cx,cx,r,0,Math.PI*2);
       ctx.fillStyle='#1a1a2e'; ctx.fill();
       ctx.strokeStyle='#374151'; ctx.lineWidth=3; ctx.stroke();
@@ -239,6 +247,8 @@ function draw(i, rot) {
 
     const seg = Math.PI*2/items.length;
     items.forEach((label,j) => {
+      if (!label) return;
+      
       const a0=rot+j*seg, a1=a0+seg;
       ctx.beginPath(); ctx.moveTo(cx,cx); ctx.arc(cx,cx,r,a0,a1); ctx.closePath();
       ctx.fillStyle=PAL[j%PAL.length]; ctx.fill();
@@ -259,7 +269,7 @@ function draw(i, rot) {
     ctx.fillStyle='#0f0e17'; ctx.fill();
     ctx.strokeStyle='#7c3aed'; ctx.lineWidth=3; ctx.stroke();
   } catch (error) {
-    console.error('Error in draw function:', error);
+    console.error('Error in draw function for wheel', i, ':', error);
   }
 }
 
@@ -267,9 +277,16 @@ function draw(i, rot) {
 function spin(i) {
   if (busy) return;
   const items=getItems(i);
-  if (!items.length) { alert('No options in this wheel!\nUse ⚙ to add some.'); return; }
+  if (!items || items.length === 0) { 
+    alert('No options in this wheel!\nUse ⚙ to add some.'); 
+    return; 
+  }
   busy=true;
-  document.getElementById(`s${i}`).disabled=true;
+  
+  const spinButton = document.getElementById(`s${i}`);
+  if (spinButton) {
+    spinButton.disabled=true;
+  }
 
   const n=items.length, seg=Math.PI*2/n;
   const target=Math.floor(Math.random()*n);
@@ -290,10 +307,12 @@ function spin(i) {
     if (t<1) { requestAnimationFrame(frame); return; }
     rots[i]=finalRot;
     chosen[i]=items[target];
+    
     const resultElement = document.getElementById(`r${i}`);
     if (resultElement) {
       resultElement.textContent=items[target];
     }
+    
     busy=false;
     onDone(i);
   })(t0);
@@ -313,7 +332,9 @@ function onDone(i) {
     }
     draw(next, rots[next]);
   }
-  if (chosen.every(v => v!==null)) {
+  
+  const allChosen = chosen.every(v => v!==null);
+  if (allChosen) {
     const labels=['Mii','Category','Subcategory','Item'];
     const resultChips = document.getElementById('result-chips');
     if (resultChips) {
@@ -331,6 +352,7 @@ function resetAll() {
   chosen.fill(null); 
   rots.fill(0); 
   busy=false;
+  
   for (let i=0;i<wheelCount;i++) {
     const resultElement = document.getElementById(`r${i}`);
     const spinButton = document.getElementById(`s${i}`);
@@ -343,6 +365,7 @@ function resetAll() {
     }
     draw(i,0);
   }
+  
   const resultCard = document.getElementById('result-card');
   if (resultCard) {
     resultCard.classList.remove('show');
@@ -421,7 +444,7 @@ function renderList() {
     items=D.items[k]||[]; 
   }
 
-  if (!items.length) { 
+  if (!items || items.length === 0) { 
     list.innerHTML='<div class="empty-msg">No options yet. Add one below!</div>'; 
     return; 
   }
@@ -436,7 +459,9 @@ function addItem() {
   const input = document.getElementById('m-input');
   const val = input ? input.value.trim() : '';
   if (!val) return;
-  const i=mIdx;
+  
+  const i = mIdx;
+  if (i < 0 || i >= wheelCount) return;
   
   try {
     if (i===0) { 
@@ -469,13 +494,16 @@ function addItem() {
     // Redraw the wheel for this index
     draw(i,rots[i]);
     
-    // Force a layout recalculation
-    const container = document.getElementById('wheels-container');
-    if (container) {
-      container.style.display = 'none';
-      container.offsetHeight; // Trigger reflow
-      container.style.display = '';
-    }
+    // Force layout recalculation
+    setTimeout(() => {
+      const container = document.getElementById('wheels-container');
+      if (container) {
+        container.style.height = container.offsetHeight + 'px';
+        setTimeout(() => {
+          container.style.height = '';
+        }, 10);
+      }
+    }, 50);
     
   } catch (error) {
     console.error('Error in addItem:', error);
@@ -483,7 +511,8 @@ function addItem() {
 }
 
 function removeItem(j) {
-  const i=mIdx;
+  const i = mIdx;
+  if (i < 0 || i >= wheelCount) return;
   
   try {
     if (i===0) D.miis.splice(j,1);
@@ -510,13 +539,16 @@ function removeItem(j) {
     renderList(); 
     draw(i,rots[i]);
     
-    // Force a layout recalculation
-    const container = document.getElementById('wheels-container');
-    if (container) {
-      container.style.display = 'none';
-      container.offsetHeight; // Trigger reflow
-      container.style.display = '';
-    }
+    // Force layout recalculation
+    setTimeout(() => {
+      const container = document.getElementById('wheels-container');
+      if (container) {
+        container.style.height = container.offsetHeight + 'px';
+        setTimeout(() => {
+          container.style.height = '';
+        }, 10);
+      }
+    }, 50);
     
   } catch (error) {
     console.error('Error in removeItem:', error);
@@ -529,8 +561,12 @@ function closeModal() {
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
-createWheels();
-for (let i=0;i<wheelCount;i++) draw(i,0);
+document.addEventListener('DOMContentLoaded', function() {
+  createWheels();
+  for (let i=0;i<wheelCount;i++) {
+    draw(i,0);
+  }
+});
 </script>
 </body>
 </html>
