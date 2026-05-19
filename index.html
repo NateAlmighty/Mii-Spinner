@@ -164,10 +164,10 @@ const save = () => {
 };
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
-const chosen = [null, null, null, null];
-const rots = new Array(wheelCount).fill(0);
 let   busy   = false;
 let   wheelCount = 4; // Default number of wheels
+const chosen = [null, null, null, null];
+const rots = ; // Initialize as array of zeros
 
 function getItems(i) {
   if (i === 0) return [...D.miis];
