@@ -10,16 +10,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffff
 header{padding:16px 28px;background:#12112a;border-bottom:2px solid #6d28d9;display:flex;align-items:center;gap:12px}
 header h1{font-size:1.4rem;color:#a78bfa;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:.8rem;color:#6b7280;margin-left:auto}
-.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;min-height:240px}
+.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;min-height:240px;position:relative}
 .arrow-sep{display:flex;align-items:center;color:#6d28d9;font-size:1.4rem;padding-top:60px;flex-shrink:0}
-.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s;min-width:200px;flex:0 0 auto}
+.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s;min-width:200px;width:200px;flex:0 0 auto}
 .wheel-section.locked{background-color:rgba(15,14,23,0.3)}
 .wheel-section.active{background-color:transparent}
-.wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700;text-align:center}
+.wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700;text-align:center;word-wrap:break-word;overflow-wrap:break-word}
 .wheel-wrapper{position:relative;width:200px;height:200px}
 canvas{border-radius:50%;box-shadow:0 0 28px rgba(109,40,217,.35)}
 .pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:20px solid #fbbf24;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));z-index:10}
-.wheel-result{font-size:.95rem;font-weight:700;color:#fde68a;min-height:22px;text-align:center;max-width:200px;transition:all .3s}
+.wheel-result{font-size:.95rem;font-weight:700;color:#fde68a;min-height:22px;text-align:center;max-width:200px;transition:all .3s;word-wrap:break-word;overflow-wrap:break-word}
 .wheel-btns{display:flex;gap:8px}
 button{cursor:pointer;border:none;border-radius:8px;font-size:.85rem;font-weight:600;padding:8px 16px;transition:all .15s}
 .btn-spin{background:#7c3aed;color:#fff;padding:9px 22px}
@@ -63,6 +63,17 @@ select.modal-sel:focus{outline:none;border-color:#7c3aed}
 .empty-msg{color:#4b5563;font-size:.83rem;text-align:center;padding:18px}
 
 .sel-label{font-size:.75rem;color:#6b7280;display:block;margin-bottom:4px}
+
+/* Layout recalculation animation */
+@keyframes layoutReset {
+  0% { opacity: 1; }
+  50% { opacity: 0.99; }
+  100% { opacity: 1; }
+}
+
+.layout-reset {
+  animation: layoutReset 0.1s ease-in-out;
+}
 </style>
 </head>
 <body>
@@ -113,7 +124,7 @@ const DEFAULTS = {
     Treasures:   [' Books', 'Music', 'Videos', 'Video Games', 'Pets'],
     Clothing: ['Hat','Shirt','Pants','Cape','Shoes'],
     Food:     ['Fruit','Meat','Bread', 'Candy'],
-    InteriorExterior: [],
+    'Interior/Exterior': [],
     Objects: [],
     Landscaping: []
   },
@@ -164,8 +175,8 @@ const save = () => {
 };
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
-const chosen = [];
-const rots = [];
+const chosen = [null, null, null, null];
+const rots = ;
 let   busy   = false;
 let   wheelCount = 4; // Default number of wheels
 
@@ -303,7 +314,9 @@ function onDone(i) {
 }
 
 function resetAll() {
-  chosen.fill(null); rots.fill(0); busy=false;
+  chosen.fill(null); 
+  rots.fill(0); 
+  busy=false;
   for (let i=0;i<wheelCount;i++) {
     document.getElementById(`r${i}`).textContent='—';
     document.getElementById(`s${i}`).disabled=(i!==0);
@@ -336,7 +349,7 @@ function openModal(i) {
     wrap.style.display='block';
     document.getElementById('m-sel-label').textContent='Category:';
     sel.innerHTML=D.categories.map(c=>`<option>${c}</option>`).join('');
-    if (chosen && chosen && D.categories.includes(chosen)) sel.value=chosen;
+    if (chosen && D.categories.includes(chosen)) sel.value=chosen;
   } else if (i===3) {
     wrap.style.display='block';
     document.getElementById('m-sel-label').textContent='Mii → Category → Subcategory:';
@@ -384,11 +397,8 @@ function addItem() {
   renderList(); 
   draw(i,rots[i]);
   
-  // Force a reflow to update layout immediately after adding items
-  const container = document.getElementById('wheels-container');
-  container.style.display = 'none';
-  container.offsetHeight; // Trigger reflow
-  container.style.display = '';
+  // Force layout recalculation using multiple techniques
+  triggerLayoutRecalculation();
 }
 
 function removeItem(j) {
@@ -399,11 +409,31 @@ function removeItem(j) {
   else { const k=document.getElementById('m-sel').value; D.items[k].splice(j,1); }
   save(); renderList(); draw(i,rots[i]);
   
-  // Force a reflow to update layout immediately after removing items
+  // Force layout recalculation using multiple techniques
+  triggerLayoutRecalculation();
+}
+
+function triggerLayoutRecalculation() {
   const container = document.getElementById('wheels-container');
+  
+  // Technique 1: CSS animation class
+  container.classList.add('layout-reset');
+  setTimeout(() => container.classList.remove('layout-reset'), 100);
+  
+  // Technique 2: Force reflow
   container.style.display = 'none';
   container.offsetHeight; // Trigger reflow
   container.style.display = '';
+  
+  // Technique 3: Request animation frame
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      // Force a final reflow
+      container.style.transform = 'scale(1)';
+      container.offsetHeight;
+      container.style.transform = '';
+    });
+  });
 }
 
 function closeModal() { document.getElementById('overlay').classList.remove('open'); }
