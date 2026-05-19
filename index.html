@@ -10,12 +10,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0e17;color:#fffff
 header{padding:16px 28px;background:#12112a;border-bottom:2px solid #6d28d9;display:flex;align-items:center;gap:12px}
 header h1{font-size:1.4rem;color:#a78bfa;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:.8rem;color:#6b7280;margin-left:auto}
-.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+.wheels-container{display:flex;gap:20px;padding:28px 24px 16px;justify-content:center;flex-wrap:wrap;align-items:flex-start;min-height:240px}
 .arrow-sep{display:flex;align-items:center;color:#6d28d9;font-size:1.4rem;padding-top:60px;flex-shrink:0}
-.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s;min-width:200px}
+.wheel-section{display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .3s;min-width:200px;flex:0 0 auto}
 .wheel-section.locked{background-color:rgba(15,14,23,0.3)}
 .wheel-section.active{background-color:transparent}
-.wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700}
+.wheel-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;font-weight:700;text-align:center}
 .wheel-wrapper{position:relative;width:200px;height:200px}
 canvas{border-radius:50%;box-shadow:0 0 28px rgba(109,40,217,.35)}
 .pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:20px solid #fbbf24;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));z-index:10}
@@ -381,7 +381,14 @@ function addItem() {
   else if (i===2) { const c=document.getElementById('m-sel').value; if(!D.subcategories[c]) D.subcategories[c]=[]; if(!D.subcategories[c].includes(val)) D.subcategories[c].push(val); }
   else { const k=document.getElementById('m-sel').value; if(!k) return; if(!D.items[k]) D.items[k]=[]; if(!D.items[k].includes(val)) D.items[k].push(val); }
   save(); document.getElementById('m-input').value='';
-  renderList(); draw(i,rots[i]);
+  renderList(); 
+  draw(i,rots[i]);
+  
+  // Force a reflow to update layout immediately after adding items
+  const container = document.getElementById('wheels-container');
+  container.style.display = 'none';
+  container.offsetHeight; // Trigger reflow
+  container.style.display = '';
 }
 
 function removeItem(j) {
@@ -391,6 +398,12 @@ function removeItem(j) {
   else if (i===2) { const c=document.getElementById('m-sel').value; D.subcategories[c].splice(j,1); }
   else { const k=document.getElementById('m-sel').value; D.items[k].splice(j,1); }
   save(); renderList(); draw(i,rots[i]);
+  
+  // Force a reflow to update layout immediately after removing items
+  const container = document.getElementById('wheels-container');
+  container.style.display = 'none';
+  container.offsetHeight; // Trigger reflow
+  container.style.display = '';
 }
 
 function closeModal() { document.getElementById('overlay').classList.remove('open'); }
