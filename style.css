@@ -14,8 +14,8 @@ canvas{border-radius:50%;box-shadow:0 0 28px rgba(109,40,217,.35)}
 .pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:20px solid #fbbf24;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));z-index:10}
 .wheel-result{font-size:.95rem;font-weight:700;color:#fde68a;min-height:22px;text-align:center;max-width:200px;transition:all .3s;word-wrap:break-word;overflow-wrap:break-word}
 .wheel-btns{display:flex;gap:8px}
-button{cursor:pointer;border:none;border-radius:8px;font-size:.85rem;font-weight:600;padding:8px 16px;transition:all .15s}
-.btn-spin{background:#7c3aed;color:#fff;padding:9px 22px}
+button{cursor:pointer;border:none;border-radius:8px;font-size:.85rem;font-weight:600;padding:8px;transition:all .15s}
+.btn-spin{background:#7c3aed;color:#fff;padding:8px 8px}
 .btn-spin:hover:not(:disabled){background:#6d28d9;transform:translateY(-1px)}
 .btn-spin:disabled{background:#2d2d3a;color:#555;cursor:not-allowed}
 .btn-gear{background:#1e1e2e;color:#9ca3af;border:1px solid #374151;padding:9px 13px}
