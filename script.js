@@ -535,9 +535,732 @@ function removeItem(j) {
   }
 }
 
-function closeModal() { 
+function closeModal() {
   const overlay = document.getElementById('overlay');
-  if (overlay) overlay.classList.remove('open'); 
+  if (overlay) overlay.classList.remove('open');
+}
+
+// ─── EXPORT/IMPORT ─────────────────────────────────────────────────────────────
+function toggleExportDropdown() {
+  const dropdown = document.getElementById('export-dropdown');
+  const importDropdown = document.getElementById('import-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('show');
+    if (importDropdown) importDropdown.classList.remove('show');
+  }
+}
+
+function toggleImportDropdown() {
+  const dropdown = document.getElementById('import-dropdown');
+  const exportDropdown = document.getElementById('export-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('show');
+    if (exportDropdown) exportDropdown.classList.remove('show');
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.dropdown')) {
+    const exportDropdown = document.getElementById('export-dropdown');
+    const importDropdown = document.getElementById('import-dropdown');
+    if (exportDropdown) exportDropdown.classList.remove('show');
+    if (importDropdown) importDropdown.classList.remove('show');
+  }
+});
+
+function exportData(format) {
+  const data = D;
+  let content = '';
+  let filename = '';
+  let mimeType = '';
+
+  switch (format) {
+    case 'json':
+      content = JSON.stringify(data, null, 2);
+      filename = 'mii-spinner-data.json';
+      mimeType = 'application/json';
+      break;
+    case 'csv':
+      content = dataToCSV(data);
+      filename = 'mii-spinner-data.csv';
+      mimeType = 'text/csv';
+      break;
+    case 'xml':
+      content = dataToXML(data);
+      filename = 'mii-spinner-data.xml';
+      mimeType = 'application/xml';
+      break;
+    case 'yaml':
+      content = dataToYAML(data);
+      filename = 'mii-spinner-data.yaml';
+      mimeType = 'text/yaml';
+      break;
+    case 'txt':
+      content = dataToTXT(data);
+      filename = 'mii-spinner-data.txt';
+      mimeType = 'text/plain';
+      break;
+    case 'ini':
+      content = dataToINI(data);
+      filename = 'mii-spinner-data.ini';
+      mimeType = 'text/plain';
+      break;
+    case 'toml':
+      content = dataToTOML(data);
+      filename = 'mii-spinner-data.toml';
+      mimeType = 'text/plain';
+      break;
+    case 'csl':
+      content = dataToCSL(data);
+      filename = 'mii-spinner-data.csl';
+      mimeType = 'application/json';
+      break;
+    default:
+      alert('Unsupported format');
+      return;
+  }
+
+  downloadFile(content, filename, mimeType);
+  
+  // Close dropdown
+  const exportDropdown = document.getElementById('export-dropdown');
+  if (exportDropdown) exportDropdown.classList.remove('show');
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function dataToCSV(data) {
+  let csv = 'Type,Category,Subcategory,Item\n';
+  
+  // Miis
+  data.miis.forEach(mii => {
+    csv += `Mii,,,"${mii}"\n`;
+  });
+  
+  // Categories
+  data.categories.forEach(category => {
+    csv += `Category,,"${category}",\n`;
+  });
+  
+  // Subcategories
+  Object.entries(data.subcategories).forEach(([category, subcategories]) => {
+    subcategories.forEach(sub => {
+      csv += `Subcategory,"${category}","${sub}",\n`;
+    });
+  });
+  
+  // Items
+  Object.entries(data.items).forEach(([key, items]) => {
+    const [mii, category, subcategory] = key.split('|');
+    items.forEach(item => {
+      csv += `Item,"${mii}|${category}|${subcategory}",,"${item}"\n`;
+    });
+  });
+  
+  return csv;
+}
+
+function dataToXML(data) {
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<MiiSpinnerData>\n';
+  
+  xml += '  <Miis>\n';
+  data.miis.forEach(mii => {
+    xml += `    <Mii>${escapeXML(mii)}</Mii>\n`;
+  });
+  xml += '  </Miis>\n';
+  
+  xml += '  <Categories>\n';
+  data.categories.forEach(category => {
+    xml += `    <Category>${escapeXML(category)}</Category>\n`;
+  });
+  xml += '  </Categories>\n';
+  
+  xml += '  <Subcategories>\n';
+  Object.entries(data.subcategories).forEach(([category, subcategories]) => {
+    xml += `    <Category name="${escapeXML(category)}">\n`;
+    subcategories.forEach(sub => {
+      xml += `      <Subcategory>${escapeXML(sub)}</Subcategory>\n`;
+    });
+    xml += '    </Category>\n';
+  });
+  xml += '  </Subcategories>\n';
+  
+  xml += '  <Items>\n';
+  Object.entries(data.items).forEach(([key, items]) => {
+    const [mii, category, subcategory] = key.split('|');
+    xml += `    <Combination mii="${escapeXML(mii)}" category="${escapeXML(category)}" subcategory="${escapeXML(subcategory)}">\n`;
+    items.forEach(item => {
+      xml += `      <Item>${escapeXML(item)}</Item>\n`;
+    });
+    xml += '    </Combination>\n';
+  });
+  xml += '  </Items>\n';
+  
+  xml += '</MiiSpinnerData>';
+  return xml;
+}
+
+function escapeXML(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function dataToYAML(data) {
+  let yaml = 'miis:\n';
+  data.miis.forEach(mii => {
+    yaml += `  - "${mii}"\n`;
+  });
+  
+  yaml += '\ncategories:\n';
+  data.categories.forEach(category => {
+    yaml += `  - "${category}"\n`;
+  });
+  
+  yaml += '\nsubcategories:\n';
+  Object.entries(data.subcategories).forEach(([category, subcategories]) => {
+    yaml += `  "${category}":\n`;
+    subcategories.forEach(sub => {
+      yaml += `    - "${sub}"\n`;
+    });
+  });
+  
+  yaml += '\nitems:\n';
+  Object.entries(data.items).forEach(([key, items]) => {
+    yaml += `  "${key}":\n`;
+    items.forEach(item => {
+      yaml += `    - "${item}"\n`;
+    });
+  });
+  
+  return yaml;
+}
+
+function dataToTXT(data) {
+  let txt = 'MII SPINNER DATA\n';
+  txt += '='.repeat(50) + '\n\n';
+  
+  txt += 'MIIS:\n';
+  data.miis.forEach(mii => {
+    txt += `  - ${mii}\n`;
+  });
+  
+  txt += '\nCATEGORIES:\n';
+  data.categories.forEach(category => {
+    txt += `  - ${category}\n`;
+  });
+  
+  txt += '\nSUBCATEGORIES:\n';
+  Object.entries(data.subcategories).forEach(([category, subcategories]) => {
+    txt += `  ${category}:\n`;
+    subcategories.forEach(sub => {
+      txt += `    - ${sub}\n`;
+    });
+  });
+  
+  txt += '\nITEMS:\n';
+  Object.entries(data.items).forEach(([key, items]) => {
+    txt += `  ${key}:\n`;
+    items.forEach(item => {
+      txt += `    - ${item}\n`;
+    });
+  });
+  
+  return txt;
+}
+
+function dataToINI(data) {
+  let ini = '[Miis]\n';
+  data.miis.forEach((mii, i) => {
+    ini += `mii${i + 1}=${mii}\n`;
+  });
+  
+  ini += '\n[Categories]\n';
+  data.categories.forEach((category, i) => {
+    ini += `category${i + 1}=${category}\n`;
+  });
+  
+  ini += '\n[Subcategories]\n';
+  Object.entries(data.subcategories).forEach(([category, subcategories]) => {
+    const safeCategory = category.replace(/[^a-zA-Z0-9]/g, '_');
+    ini += `${safeCategory}=${subcategories.join(',')}\n`;
+  });
+  
+  ini += '\n[Items]\n';
+  Object.entries(data.items).forEach(([key, items]) => {
+    const safeKey = key.replace(/[^a-zA-Z0-9|]/g, '_');
+    ini += `${safeKey}=${items.join(',')}\n`;
+  });
+  
+  return ini;
+}
+
+function dataToTOML(data) {
+  let toml = 'miis = [\n';
+  data.miis.forEach(mii => {
+    toml += `  "${mii}",\n`;
+  });
+  toml += ']\n\n';
+  
+  toml += 'categories = [\n';
+  data.categories.forEach(category => {
+    toml += `  "${category}",\n`;
+  });
+  toml += ']\n\n';
+  
+  toml += '[subcategories]\n';
+  Object.entries(data.subcategories).forEach(([category, subcategories]) => {
+    toml += `"${category}" = [\n`;
+    subcategories.forEach(sub => {
+      toml += `  "${sub}",\n`;
+    });
+    toml += ']\n';
+  });
+  
+  toml += '\n[items]\n';
+  Object.entries(data.items).forEach(([key, items]) => {
+    toml += `"${key}" = [\n`;
+    items.forEach(item => {
+      toml += `  "${item}",\n`;
+    });
+    toml += ']\n';
+  });
+  
+  return toml;
+}
+
+function dataToCSL(data) {
+  // CSL (Citation Style Language) JSON format
+  const csl = {
+    schema: 'https://github.com/citation-style-language/schema',
+    version: '1.0.0',
+    type: 'dataset',
+    title: 'Mii Spinner Data',
+    author: data.miis.map(mii => ({
+      given: mii.split(' ')[0] || mii,
+      family: mii.split(' ').slice(1).join(' ') || ''
+    })),
+    categories: data.categories.map(category => ({
+      id: category,
+      type: 'category',
+      title: category,
+      subcategories: (data.subcategories[category] || []).map(sub => ({
+        id: sub,
+        type: 'subcategory',
+        title: sub
+      }))
+    })),
+    items: Object.entries(data.items).map(([key, items]) => {
+      const [mii, category, subcategory] = key.split('|');
+      return {
+        id: key,
+        type: 'item',
+        mii: mii,
+        category: category,
+        subcategory: subcategory,
+        title: items.join(', ')
+      };
+    })
+  };
+  
+  return JSON.stringify(csl, null, 2);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const content = e.target.result;
+    const filename = file.name.toLowerCase();
+    let format = '';
+    
+    if (filename.endsWith('.json')) format = 'json';
+    else if (filename.endsWith('.csv')) format = 'csv';
+    else if (filename.endsWith('.xml')) format = 'xml';
+    else if (filename.endsWith('.yaml') || filename.endsWith('.yml')) format = 'yaml';
+    else if (filename.endsWith('.txt')) format = 'txt';
+    else if (filename.endsWith('.ini')) format = 'ini';
+    else if (filename.endsWith('.toml')) format = 'toml';
+    else if (filename.endsWith('.csl')) format = 'csl';
+    else {
+      alert('Unsupported file format');
+      return;
+    }
+    
+    try {
+      const data = parseData(content, format);
+      if (data) {
+        D = data;
+        save();
+        resetAll();
+        alert('Data imported successfully!');
+      }
+    } catch (error) {
+      alert('Error importing data: ' + error.message);
+    }
+  };
+  
+  reader.readAsText(file);
+  
+  // Reset file input
+  event.target.value = '';
+  
+  // Close dropdown
+  const importDropdown = document.getElementById('import-dropdown');
+  if (importDropdown) importDropdown.classList.remove('show');
+}
+
+function parseData(content, format) {
+  switch (format) {
+    case 'json':
+      return JSON.parse(content);
+    case 'csv':
+      return csvToData(content);
+    case 'xml':
+      return xmlToData(content);
+    case 'yaml':
+      return yamlToData(content);
+    case 'txt':
+      return txtToData(content);
+    case 'ini':
+      return iniToData(content);
+    case 'toml':
+      return tomlToData(content);
+    case 'csl':
+      return cslToData(content);
+    default:
+      throw new Error('Unsupported format');
+  }
+}
+
+function csvToData(csv) {
+  const lines = csv.split('\n').filter(line => line.trim());
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  // Skip header
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(',').map(p => p.replace(/^"|"$/g, '').trim());
+    const [type, category, subcategory, item] = parts;
+    
+    if (type === 'Mii' && item) {
+      data.miis.push(item);
+    } else if (type === 'Category' && category) {
+      data.categories.push(category);
+      data.subcategories[category] = data.subcategories[category] || [];
+    } else if (type === 'Subcategory' && category && subcategory) {
+      if (!data.subcategories[category]) data.subcategories[category] = [];
+      data.subcategories[category].push(subcategory);
+    } else if (type === 'Item' && category && item) {
+      const key = category;
+      if (!data.items[key]) data.items[key] = [];
+      data.items[key].push(item);
+    }
+  }
+  
+  return data;
+}
+
+function xmlToData(xml) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'text/xml');
+  
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  // Parse Miis
+  const miiNodes = doc.querySelectorAll('Mii');
+  miiNodes.forEach(node => {
+    data.miis.push(node.textContent);
+  });
+  
+  // Parse Categories
+  const categoryNodes = doc.querySelectorAll('Categories > Category');
+  categoryNodes.forEach(node => {
+    data.categories.push(node.textContent);
+    data.subcategories[node.textContent] = data.subcategories[node.textContent] || [];
+  });
+  
+  // Parse Subcategories
+  const subcategoryNodes = doc.querySelectorAll('Subcategories > Category');
+  subcategoryNodes.forEach(node => {
+    const categoryName = node.getAttribute('name');
+    const subNodes = node.querySelectorAll('Subcategory');
+    data.subcategories[categoryName] = [];
+    subNodes.forEach(subNode => {
+      data.subcategories[categoryName].push(subNode.textContent);
+    });
+  });
+  
+  // Parse Items
+  const combinationNodes = doc.querySelectorAll('Items > Combination');
+  combinationNodes.forEach(node => {
+    const mii = node.getAttribute('mii');
+    const category = node.getAttribute('category');
+    const subcategory = node.getAttribute('subcategory');
+    const key = `${mii}|${category}|${subcategory}`;
+    
+    const itemNodes = node.querySelectorAll('Item');
+    data.items[key] = [];
+    itemNodes.forEach(itemNode => {
+      data.items[key].push(itemNode.textContent);
+    });
+  });
+  
+  return data;
+}
+
+function yamlToData(yaml) {
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  const lines = yaml.split('\n');
+  let currentSection = '';
+  let currentKey = '';
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    
+    if (trimmed.startsWith('miis:')) {
+      currentSection = 'miis';
+    } else if (trimmed.startsWith('categories:')) {
+      currentSection = 'categories';
+    } else if (trimmed.startsWith('subcategories:')) {
+      currentSection = 'subcategories';
+    } else if (trimmed.startsWith('items:')) {
+      currentSection = 'items';
+    } else if (trimmed.startsWith('- ')) {
+      const value = trimmed.substring(2).replace(/^"|"$/g, '');
+      
+      if (currentSection === 'miis') {
+        data.miis.push(value);
+      } else if (currentSection === 'categories') {
+        data.categories.push(value);
+        data.subcategories[value] = data.subcategories[value] || [];
+      } else if (currentSection === 'subcategories' && currentKey) {
+        data.subcategories[currentKey].push(value);
+      } else if (currentSection === 'items' && currentKey) {
+        data.items[currentKey].push(value);
+      }
+    } else if (trimmed.match(/^"[^"]+":$/)) {
+      currentKey = trimmed.substring(1, trimmed.length - 1);
+      if (currentSection === 'subcategories') {
+        data.subcategories[currentKey] = data.subcategories[currentKey] || [];
+      } else if (currentSection === 'items') {
+        data.items[currentKey] = data.items[currentKey] || [];
+      }
+    }
+  });
+  
+  return data;
+}
+
+function txtToData(txt) {
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  const lines = txt.split('\n');
+  let currentSection = '';
+  let currentKey = '';
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    
+    if (trimmed.toUpperCase() === 'MIIS:') {
+      currentSection = 'miis';
+    } else if (trimmed.toUpperCase() === 'CATEGORIES:') {
+      currentSection = 'categories';
+    } else if (trimmed.toUpperCase() === 'SUBCATEGORIES:') {
+      currentSection = 'subcategories';
+    } else if (trimmed.toUpperCase() === 'ITEMS:') {
+      currentSection = 'items';
+    } else if (trimmed.startsWith('- ')) {
+      const value = trimmed.substring(2);
+      
+      if (currentSection === 'miis') {
+        data.miis.push(value);
+      } else if (currentSection === 'categories') {
+        data.categories.push(value);
+        data.subcategories[value] = data.subcategories[value] || [];
+      } else if (currentSection === 'subcategories' && currentKey) {
+        data.subcategories[currentKey].push(value);
+      } else if (currentSection === 'items' && currentKey) {
+        data.items[currentKey].push(value);
+      }
+    } else if (trimmed.endsWith(':') && !trimmed.toUpperCase().includes('MIIS') && !trimmed.toUpperCase().includes('CATEGORIES') && !trimmed.toUpperCase().includes('SUBCATEGORIES') && !trimmed.toUpperCase().includes('ITEMS')) {
+      currentKey = trimmed.substring(0, trimmed.length - 1);
+      if (currentSection === 'subcategories') {
+        data.subcategories[currentKey] = data.subcategories[currentKey] || [];
+      } else if (currentSection === 'items') {
+        data.items[currentKey] = data.items[currentKey] || [];
+      }
+    }
+  });
+  
+  return data;
+}
+
+function iniToData(ini) {
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  const lines = ini.split('\n');
+  let currentSection = '';
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    
+    if (trimmed.startsWith('[Miis]')) {
+      currentSection = 'miis';
+    } else if (trimmed.startsWith('[Categories]')) {
+      currentSection = 'categories';
+    } else if (trimmed.startsWith('[Subcategories]')) {
+      currentSection = 'subcategories';
+    } else if (trimmed.startsWith('[Items]')) {
+      currentSection = 'items';
+    } else if (trimmed.includes('=')) {
+      const [key, value] = trimmed.split('=');
+      
+      if (currentSection === 'miis') {
+        data.miis.push(value);
+      } else if (currentSection === 'categories') {
+        data.categories.push(value);
+        data.subcategories[value] = data.subcategories[value] || [];
+      } else if (currentSection === 'subcategories') {
+        const category = key.replace(/_/g, ' ');
+        data.subcategories[category] = value.split(',').map(v => v.trim());
+      } else if (currentSection === 'items') {
+        const itemKey = key.replace(/_/g, ' ');
+        data.items[itemKey] = value.split(',').map(v => v.trim());
+      }
+    }
+  });
+  
+  return data;
+}
+
+function tomlToData(toml) {
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  const lines = toml.split('\n');
+  let currentSection = '';
+  let currentKey = '';
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    
+    if (trimmed.startsWith('miis = [')) {
+      currentSection = 'miis';
+    } else if (trimmed.startsWith('categories = [')) {
+      currentSection = 'categories';
+    } else if (trimmed.startsWith('[subcategories]')) {
+      currentSection = 'subcategories';
+    } else if (trimmed.startsWith('[items]')) {
+      currentSection = 'items';
+    } else if (trimmed.startsWith('"') && trimmed.endsWith('",')) {
+      const value = trimmed.substring(1, trimmed.length - 2);
+      
+      if (currentSection === 'miis') {
+        data.miis.push(value);
+      } else if (currentSection === 'categories') {
+        data.categories.push(value);
+        data.subcategories[value] = data.subcategories[value] || [];
+      } else if (currentSection === 'subcategories' && currentKey) {
+        data.subcategories[currentKey].push(value);
+      } else if (currentSection === 'items' && currentKey) {
+        data.items[currentKey].push(value);
+      }
+    } else if (trimmed.match(/^"[^"]+" = \[$/)) {
+      currentKey = trimmed.substring(1, trimmed.indexOf(' = ['));
+      if (currentSection === 'subcategories') {
+        data.subcategories[currentKey] = data.subcategories[currentKey] || [];
+      } else if (currentSection === 'items') {
+        data.items[currentKey] = data.items[currentKey] || [];
+      }
+    }
+  });
+  
+  return data;
+}
+
+function cslToData(csl) {
+  const parsed = JSON.parse(csl);
+  const data = {
+    miis: [],
+    categories: [],
+    subcategories: {},
+    items: {}
+  };
+  
+  // Parse authors as Miis
+  if (parsed.author && Array.isArray(parsed.author)) {
+    parsed.author.forEach(author => {
+      const name = [author.given, author.family].filter(Boolean).join(' ');
+      if (name) data.miis.push(name);
+    });
+  }
+  
+  // Parse categories
+  if (parsed.categories && Array.isArray(parsed.categories)) {
+    parsed.categories.forEach(cat => {
+      data.categories.push(cat.id);
+      if (cat.subcategories && Array.isArray(cat.subcategories)) {
+        data.subcategories[cat.id] = cat.subcategories.map(sub => sub.id);
+      }
+    });
+  }
+  
+  // Parse items
+  if (parsed.items && Array.isArray(parsed.items)) {
+    parsed.items.forEach(item => {
+      const key = `${item.mii}|${item.category}|${item.subcategory}`;
+      data.items[key] = item.title ? item.title.split(', ') : [];
+    });
+  }
+  
+  return data;
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────

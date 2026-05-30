@@ -20,6 +20,28 @@
 
 <div class="bottom">
   <button class="btn-reset" onclick="resetAll()">🔄 Reset All</button>
+  <div class="export-import-section">
+    <div class="dropdown">
+      <button class="btn-export" onclick="toggleExportDropdown()">📤 Export</button>
+      <div class="dropdown-content" id="export-dropdown">
+        <button onclick="exportData('json')">JSON</button>
+        <button onclick="exportData('csv')">CSV</button>
+        <button onclick="exportData('xml')">XML</button>
+        <button onclick="exportData('yaml')">YAML</button>
+        <button onclick="exportData('txt')">TXT</button>
+        <button onclick="exportData('ini')">INI</button>
+        <button onclick="exportData('toml')">TOML</button>
+        <button onclick="exportData('csl')">CSL</button>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button class="btn-import" onclick="toggleImportDropdown()">📥 Import</button>
+      <div class="dropdown-content" id="import-dropdown">
+        <button onclick="document.getElementById('file-input').click()">Choose File...</button>
+        <input type="file" id="file-input" accept=".json,.csv,.xml,.yaml,.yml,.txt,.ini,.toml,.csl" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+  </div>
   <div class="result-card" id="result-card">
     <h2>🎉 Final Result</h2>
     <div class="result-chips" id="result-chips"></div>

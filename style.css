@@ -21,6 +21,16 @@ button{cursor:pointer;border:none;border-radius:8px;font-size:.85rem;font-weight
 .btn-gear{background:#1e1e2e;color:#9ca3af;border:1px solid #374151;padding:9px 13px}
 .btn-gear:hover{background:#2d2d3a;color:#e5e7eb}
 .bottom{padding:0 24px 28px;display:flex;flex-direction:column;gap:12px}
+.export-import-section{display:flex;gap:10px;align-items:center}
+.dropdown{position:relative;display:inline-block}
+.btn-export,.btn-import{background:#1e1e2e;color:#9ca3af;border:1px solid #374151;padding:8px 16px}
+.btn-export:hover,.btn-import:hover{background:#2d2d3a;color:#e5e7eb}
+.dropdown-content{display:none;position:absolute;background:#12112a;min-width:140px;border:1px solid #6d28d9;border-radius:8px;box-shadow:0 8px 16px rgba(0,0,0,.4);z-index:100;bottom:100%;margin-bottom:8px;right:0}
+.dropdown-content.show{display:block}
+.dropdown-content button{width:100%;text-align:left;background:none;color:#e5e7eb;padding:10px 14px;border:none;border-radius:0}
+.dropdown-content button:first-child{border-radius:8px 8px 0 0}
+.dropdown-content button:last-child{border-radius:0 0 8px 8px}
+.dropdown-content button:hover{background:#2d2d3a;color:#fff}
 .result-card{background:#12112a;border:1px solid #7c3aed;border-radius:14px;padding:18px 24px;display:none;animation:fadeIn .4s ease}
 .result-card.show{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
